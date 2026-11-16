@@ -110,7 +110,7 @@ function pickColor(c,t,s){var ok=false;try{ok=c&&window.CSS&&CSS.supports("color
 if(ok)return c;if(s)return "";var h=0;for(var i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))%997;return PAL[h%PAL.length]}
 function toBooks(txt){var rows=parseCSV(txt),h=rows[0].map(function(x){return x.trim().toLowerCase()});
 return rows.slice(1).filter(function(r){return r[0]&&r[0].trim()}).map(function(r,n){var o={};h.forEach(function(k,j){o[k]=(r[j]||"").trim()});
-return {id:n+"|"+o.title,title:o.title,authors:list(o.author),langs:list(o.language),genres:list(o.genre),themes:list(o.themes),age:parseInt(o.min_age)||0,pages:parseInt(o.pages)||0,diff:parseInt(o.difficulty)||0,type:o.type,year:o.year,avail:/^y/i.test(o.available),cover:o.cover_url,isbn:(o.isbn||"").replace(/[^0-9Xx]/g,""),manual:pickColor(o.color,"",true),color:pickColor(o.color,o.title)}})}
+return {id:n+"|"+o.title,title:o.title,authors:list(o.author),langs:list(o.language),genres:list(o.genre),themes:list(o.themes),age:parseInt(o.min_age)||0,pages:parseInt(o.pages)||0,diff:parseInt(o.difficulty)||0,type:o.type,year:o.year,avail:/^y/i.test(o.available),cover:o.cover_url,isbn:(o.isbn||"").replace(/isbn(-?1[03])?/gi,"").replace(/[^0-9Xx]/g,""),manual:pickColor(o.color,"",true),color:pickColor(o.color,o.title)}})}
 var B=[],S={q:"",lang:"",auth:"",type:"",age:"",pg:"",diff:"",g:[],t:[],gm:"any",tm:"any",av:false,wl:false,sort:"title"},W=[];
 try{W=JSON.parse(localStorage.getItem("wishlist")||"[]")}catch(e){W=[]}
 function saveW(){try{localStorage.setItem("wishlist",JSON.stringify(W))}catch(e){}}
