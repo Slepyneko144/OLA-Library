@@ -50,6 +50,13 @@ h1,.book h2{font-family:'Fraunces',Georgia,serif}
 .btn{border-radius:99px;padding:8px 16px}.btn.on{background:var(--ac);border-color:var(--ac);color:var(--acx)}
 input[type=search],select,input[type=number]{border-radius:12px}
 .panel{border-radius:16px}.badge{background:var(--card)}
+.cm{border-top:1px dashed color-mix(in srgb,var(--bc) 40%,var(--line));padding-top:8px}
+.ctog{background:none;border:0;cursor:pointer;font-weight:700;color:var(--tx);padding:2px 0;font-family:'Nunito',system-ui,sans-serif}
+.cmt{background:var(--card);border-radius:10px;padding:8px 10px;margin:6px 0;font:.88rem 'Nunito',system-ui,sans-serif}.cmt p{margin:2px 0 0;white-space:pre-wrap;word-break:break-word}
+.cnone,.cmsg,.cform small{font:.8rem 'Nunito',system-ui,sans-serif;color:var(--mut)}
+.cform{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.cform input,.cform textarea{background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-family:'Nunito',system-ui,sans-serif;width:100%}
+.hp{position:absolute;left:-9999px;opacity:0}
 </style></head><body><div class="wrap">
 <div class="hero"><h1>📖 Our Library</h1>
 <p class="sub">Find your next read, see what’s on the shelf, and keep a list of the ones you’re curious about.</p></div>
@@ -78,6 +85,8 @@ input[type=search],select,input[type=number]{border-radius:12px}
 <p class="note" id="src"></p>
 </div>
 <script>
+var FORM={action:"https://docs.google.com/forms/d/e/1FAIpQLSfY_5c2RDyeUtBgjyXaYwT538qO02EHpnXp8jVDSXdHwcwJjg/formResponse",title:"entry.261801718",name:"entry.102922873",comment:"entry.2088874236"};
+var COMMENTS_CSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vQMHFQvI6RzT2kcgenm2jabYYjWpZ5wv7qPEU781p8ZpSt1esmioCkWQauIesSXmqFl3vrRIzJJS-AS/pub?gid=1588631307&single=true&output=csv";
 var CSV_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vQMHFQvI6RzT2kcgenm2jabYYjWpZ5wv7qPEU781p8ZpSt1esmioCkWQauIesSXmqFl3vrRIzJJS-AS/pub?gid=0&single=true&output=csv";
 var SNAP=`title,author,language,genre,themes,min_age,pages,difficulty,type,available,cover_url
 Under the same stars,Libba Bray,English,"Historical Fiction, Mystery, Thriller, Coming-of-Age, Young Adult","Resistance, Fascism, Love, Friendship, The weight of history",13,480,3,Novel,Yes,
@@ -108,9 +117,12 @@ function list(s){return (s||"").split(",").map(function(x){return x.trim()}).fil
 var PAL=["#c4572f","#2f6f6a","#8a3b5e","#c8921f","#4f7a3a","#3b5b8c","#a0522d","#6b4c9a"];
 function pickColor(c,t,s){var ok=false;try{ok=c&&window.CSS&&CSS.supports("color",c)}catch(e){}
 if(ok)return c;if(s)return "";var h=0;for(var i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))%997;return PAL[h%PAL.length]}
+function cnt(v){v=(v||"").trim();if(/^y/i.test(v))return 1;if(/^n/i.test(v))return 0;var n=parseInt(v,10);return isNaN(n)?0:Math.max(0,n)}
+function tot(c,a){var t=parseInt(c,10),n=cnt(a);return t>0?Math.max(t,n):Math.max(n,1)}
+function badgeText(b){if(b.total<=1)return b.n>0?"Available":"Checked out";return b.n>0?b.n+" of "+b.total+" available":"All copies out"}
 function toBooks(txt){var rows=parseCSV(txt),h=rows[0].map(function(x){return x.trim().toLowerCase()});
 return rows.slice(1).filter(function(r){return r[0]&&r[0].trim()}).map(function(r,n){var o={};h.forEach(function(k,j){o[k]=(r[j]||"").trim()});
-return {id:n+"|"+o.title,title:o.title,authors:list(o.author),langs:list(o.language),genres:list(o.genre),themes:list(o.themes),age:parseInt(o.min_age)||0,pages:parseInt(o.pages)||0,diff:parseInt(o.difficulty)||0,type:o.type,year:o.year,avail:/^y/i.test(o.available),cover:o.cover_url,isbn:(o.isbn||"").replace(/isbn(-?1[03])?/gi,"").replace(/[^0-9Xx]/g,""),manual:pickColor(o.color,"",true),color:pickColor(o.color,o.title)}})}
+return {id:n+"|"+o.title,title:o.title,authors:list(o.author),langs:list(o.language),genres:list(o.genre),themes:list(o.themes),age:parseInt(o.min_age)||0,pages:parseInt(o.pages)||0,diff:parseInt(o.difficulty)||0,type:o.type,year:o.year,n:cnt(o.available),total:tot(o.copies,o.available),avail:cnt(o.available)>0,cover:o.cover_url,isbn:(o.isbn||"").replace(/isbn(-?1[03])?/gi,"").replace(/[^0-9Xx]/g,""),manual:pickColor(o.color,"",true),color:pickColor(o.color,o.title)}})}
 var B=[],S={q:"",lang:"",auth:"",type:"",age:"",pg:"",diff:"",g:[],t:[],gm:"any",tm:"any",av:false,wl:false,sort:"title"},W=[];
 try{W=JSON.parse(localStorage.getItem("wishlist")||"[]")}catch(e){W=[]}
 function saveW(){try{localStorage.setItem("wishlist",JSON.stringify(W))}catch(e){}}
@@ -121,7 +133,7 @@ function fillSel(id,vals,lab){$(id).innerHTML='<option value="">'+lab+'</option>
 function fillChips(id,vals,key){$(id).innerHTML=vals.map(function(v){return'<span class="chip '+(key=="g"?"cg":"ct")+(S[key].indexOf(v)>-1?" on":"")+'" data-k="'+key+'" data-v="'+esc(v)+'">'+esc(v)+'</span>'}).join("")}
 function init(){fillSel("lang",uniq(function(b){return b.langs}),"Any language");fillSel("auth",uniq(function(b){return b.authors}),"Any author");
 fillSel("type",uniq(function(b){return b.type?[b.type]:[]}),"Any type");fillChips("gc",uniq(function(b){return b.genres}),"g");fillChips("tc",uniq(function(b){return b.themes}),"t");render();hydrate()}
-var rt=null;function later(){clearTimeout(rt);rt=setTimeout(render,150)}
+var rt=null;function later(){clearTimeout(rt);rt=setTimeout(function(){var a=document.activeElement;if(a&&a.closest&&a.closest("#list")){later();return}render()},150)}
 function coverUrl(b){if(b.cover)return b.cover;if(b.isbn)return"https://covers.openlibrary.org/b/isbn/"+b.isbn+"-M.jpg?default=false";return""}
 function dom(img){try{var W2=24,H2=34,c=document.createElement("canvas");c.width=W2;c.height=H2;var x=c.getContext("2d");x.drawImage(img,0,0,W2,H2);var d=x.getImageData(0,0,W2,H2).data,bins={},i,best=null;
 for(i=0;i<d.length;i+=4){if(d[i+3]<200)continue;var r=d[i],g=d[i+1],bl=d[i+2],mx=Math.max(r,g,bl),mn=Math.min(r,g,bl),s=mx?(mx-mn)/mx:0,l=mx/255;if((l>.93&&s<.15)||l<.12)continue;
@@ -132,6 +144,24 @@ return "rgb("+Math.round(R)+","+Math.round(G)+","+Math.round(Bb)+")"}catch(e){re
 function hydrate(){B.forEach(function(b){if(b.tried)return;b.tried=true;var u=coverUrl(b);if(!u)return;var im=new Image();im.crossOrigin="anonymous";
 im.onload=function(){b.imgok=u;var c=dom(im);if(c)b.ac=c;later()};
 im.onerror=function(){var p=new Image();p.onload=function(){b.imgok=u;later()};p.src=u};im.src=u})}
+var CM={},OPEN={};function cfgOn(){return !!(FORM.action&&FORM.title&&FORM.name&&FORM.comment&&COMMENTS_CSV)}
+function commentBlock(b){if(!cfgOn())return"";var list=CM[b.title.trim().toLowerCase()]||[],open=OPEN[b.id];
+var h='<div class="cm"><button class="ctog" data-id="'+esc(b.id)+'">💬 '+(list.length?"Comments ("+list.length+")":"Comments")+(open?" ▴":" ▾")+'</button>';
+if(open){h+='<div class="cbody">'+(list.length?list.map(function(c){return'<div class="cmt"><b>'+esc(c.name||"Anonymous")+'</b><p>'+esc(c.text)+'</p></div>'}).join(""):'<p class="cnone">No comments yet. Be the first!</p>')+
+'<div class="cform"><input class="cn" maxlength="30" placeholder="Your first name" aria-label="Your first name"><textarea class="cta" maxlength="500" rows="3" placeholder="What did you think of this book?" aria-label="Your comment"></textarea><input class="hp" tabindex="-1" autocomplete="off" aria-hidden="true"><button class="btn csend" data-id="'+esc(b.id)+'">Send comment</button><div class="cmsg"></div><small>The librarian reads every comment before it appears. Please be kind and use your first name only.</small></div></div>'}
+return h+'</div>'}
+function sendComment(btn){var art=btn.closest("article"),id=btn.dataset.id,b=B.filter(function(x){return x.id==id})[0],msg=art.querySelector(".cmsg"),n=art.querySelector(".cn").value.trim().slice(0,30),t=art.querySelector(".cta").value.trim();
+if(art.querySelector(".hp").value){msg.textContent="Thank you!";return}
+if(t.length<3){msg.textContent="Please write a comment first.";return}
+var last=0;try{last=+localStorage.getItem("lastc")||0}catch(e){}
+if(Date.now()-last<30000){msg.textContent="Please wait a moment before sending another comment.";return}
+var p=new URLSearchParams();p.append(FORM.title,b.title);p.append(FORM.name,n||"Anonymous");p.append(FORM.comment,t);btn.disabled=true;
+fetch(FORM.action,{method:"POST",mode:"no-cors",body:p}).then(function(){try{localStorage.setItem("lastc",""+Date.now())}catch(e){}art.querySelector(".cn").value="";art.querySelector(".cta").value="";msg.textContent="Thank you! Your comment will appear once the librarian has approved it.";btn.disabled=false}).catch(function(){msg.textContent="Sorry, that didn’t send. Please try again.";btn.disabled=false})}
+function loadComments(){if(!COMMENTS_CSV)return;fetch(COMMENTS_CSV).then(function(r){if(!r.ok)throw 0;return r.text()}).then(function(t){var rows=parseCSV(t),h=(rows[0]||[]).map(function(x){return x.trim().toLowerCase()});
+function ix(k){for(var i=0;i<h.length;i++)if(h[i].indexOf(k)>-1)return i;return -1}
+var ib=ix("book"),inn=ix("name"),ic=ix("comment"),ia=ix("approv");if(ib<0||ic<0||ia<0)return;CM={};
+rows.slice(1).forEach(function(r){if(!/^(y|yes|x|true|ok|approved|1|✓|✔)/i.test((r[ia]||"").trim()))return;var k=(r[ib]||"").trim().toLowerCase(),txt=(r[ic]||"").trim();if(!k||!txt)return;(CM[k]=CM[k]||[]).unshift({name:inn>-1?(r[inn]||"").trim():"",text:txt})});later()}).catch(function(){})}
+document.addEventListener("click",function(e){var t=e.target;if(t.classList.contains("ctog")){OPEN[t.dataset.id]=!OPEN[t.dataset.id];render()}else if(t.classList.contains("csend"))sendComment(t)});
 function match(b){if(S.wl&&W.indexOf(b.id)<0)return false;if(S.av&&!b.avail)return false;
 var q=S.q.toLowerCase();if(q&&(b.title+" "+b.authors.join(" ")).toLowerCase().indexOf(q)<0)return false;
 if(S.lang&&b.langs.indexOf(S.lang)<0)return false;if(S.auth&&b.authors.indexOf(S.auth)<0)return false;if(S.type&&b.type!==S.type)return false;
@@ -143,10 +173,10 @@ r.sort(function(a,b){if(k=="author")return(a.authors[0]||"").localeCompare(b.aut
 $("cnt").textContent=r.length+" of "+B.length+" books";$("wn").textContent=W.length;
 $("list").innerHTML=r.length?r.map(function(b){var on=W.indexOf(b.id)>-1;
 return'<article class="book" style="--bc:'+(b.manual||b.ac||b.color)+'"><div class="top">'+(b.imgok?'<img class="cover" src="'+esc(b.imgok)+'" alt="">':'<div class="cover" style="background:var(--bc);color:#fff">'+esc(b.title.charAt(0))+'</div>')+
-'<div style="flex:1;min-width:0"><h2>'+esc(b.title)+'</h2><div class="by">'+esc(b.authors.join(", "))+'</div><div style="margin-top:6px"><span class="badge '+(b.avail?"y":"n")+'">'+(b.avail?"Available":"Checked out")+'</span></div></div>'+
+'<div style="flex:1;min-width:0"><h2>'+esc(b.title)+'</h2><div class="by">'+esc(b.authors.join(", "))+'</div><div style="margin-top:6px"><span class="badge '+(b.avail?"y":"n")+'">'+badgeText(b)+'</span></div></div>'+
 '<button class="heart'+(on?" on":"")+'" data-id="'+esc(b.id)+'" aria-label="Wishlist">'+(on?"♥":"♡")+'</button></div>'+
 '<div class="meta"><span>Age '+b.age+'+</span><span>'+b.pages+' pages</span><span>Difficulty '+b.diff+'/5</span>'+(b.type?'<span>'+esc(b.type)+'</span>':"")+'<span>'+esc(b.langs.join(", "))+'</span>'+(b.year?'<span>'+esc(b.year)+'</span>':"")+'</div>'+
-(b.genres.length?'<div class="row"><span class="lbl">Genre</span>'+b.genres.map(function(g){return'<span class="tag g" data-k="g" data-v="'+esc(g)+'">'+esc(g)+'</span>'}).join("")+'</div>':"")+(b.themes.length?'<div class="row"><span class="lbl">Themes</span>'+b.themes.map(function(t){return'<span class="tag th" data-k="t" data-v="'+esc(t)+'">'+esc(t)+'</span>'}).join("")+'</div>':"")+'</article>'}).join(""):
+(b.genres.length?'<div class="row"><span class="lbl">Genre</span>'+b.genres.map(function(g){return'<span class="tag g" data-k="g" data-v="'+esc(g)+'">'+esc(g)+'</span>'}).join("")+'</div>':"")+(b.themes.length?'<div class="row"><span class="lbl">Themes</span>'+b.themes.map(function(t){return'<span class="tag th" data-k="t" data-v="'+esc(t)+'">'+esc(t)+'</span>'}).join("")+'</div>':"")+commentBlock(b)+'</article>'}).join(""):
 '<div class="empty">'+(S.wl&&!W.length?"Your wishlist is empty. Tap the ♡ on a book to save it.":"No books match these filters.")+'</div>'}
 function toggle(k,v){var a=S[k],i=a.indexOf(v);i>-1?a.splice(i,1):a.push(v);fillChips("gc",uniq(function(b){return b.genres}),"g");fillChips("tc",uniq(function(b){return b.themes}),"t");render()}
 document.addEventListener("click",function(e){var t=e.target;
@@ -160,4 +190,5 @@ if(t.id=="clr"){S.q=S.lang=S.auth=S.type=S.age=S.pg=S.diff="";S.g=[];S.t=[];["q"
 ["q","lang","auth","type","age","pg","diff","sort"].forEach(function(id){$(id).addEventListener("input",function(){S[id]=this.value;render()})});
 fetch(CSV_URL).then(function(r){if(!r.ok)throw 0;return r.text()}).then(function(t){B=toBooks(t);$("src").textContent="";init()})
 .catch(function(){B=toBooks(SNAP);$("src").textContent="Preview mode: showing a saved copy of the book list. On the live site this updates from the Google Sheet.";init()});
+loadComments();
 </script></body></html>
