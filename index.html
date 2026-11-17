@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Nunito:wght@400;600;700&display=swap">
 <style>
 :root{--bg:#fbf3e4;--card:#fffaf0;--tx:#3b2a20;--mut:#7d6a58;--line:#e8d9bf;--ac:#c4572f;--acx:#fff;--ok:#2f7a4a;--no:#b8402a;--gb:#dcebd5;--gt:#2f5a2a;--tb:#f9e0e8;--tt:#a02f55;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
-@media (prefers-color-scheme:light){:root:not([data-theme="light"]){--bg:#231a15;--card:#2e231c;--tx:#f3e6d3;--mut:#bba58d;--line:#4a3a2e;--ac:#ee8a5f;--acx:#2a1409;--ok:#7fd39a;--no:#f4907d;--gb:#2f4a2c;--gt:#bfe3b3;--tb:#4d2434;--tt:#f4a8c0;color-scheme:dark}}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#231a15;--card:#2e231c;--tx:#f3e6d3;--mut:#bba58d;--line:#4a3a2e;--ac:#ee8a5f;--acx:#2a1409;--ok:#7fd39a;--no:#f4907d;--gb:#2f4a2c;--gt:#bfe3b3;--tb:#4d2434;--tt:#f4a8c0;color-scheme:dark}}
 :root[data-theme="dark"]{--bg:#231a15;--card:#2e231c;--tx:#f3e6d3;--mut:#bba58d;--line:#4a3a2e;--ac:#ee8a5f;--acx:#2a1409;--ok:#7fd39a;--no:#f4907d;--gb:#2f4a2c;--gt:#bfe3b3;--tb:#4d2434;--tt:#f4a8c0;color-scheme:dark}
 *{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 Georgia,'Times New Roman',serif}
@@ -77,6 +77,7 @@ input[type=search],select,input[type=number]{border-radius:12px}
 <select id="sort" aria-label="Sort"><option value="title">Sort: Title A–Z</option><option value="author">Sort: Author A–Z</option><option value="pages">Sort: Pages (short first)</option><option value="diff">Sort: Difficulty (easy first)</option><option value="age">Sort: Min. age (youngest first)</option></select>
 <button class="btn" id="avail">Available only</button>
 <button class="btn" id="wl">♥ My wishlist (<span id="wn">0</span>)</button>
+<button class="btn" id="rqb" style="display:none">📬 Request a book</button>
 <button class="btn" id="sur">🎲 Surprise me</button>
 <button class="btn" id="ft">Filters</button>
 </div>
@@ -94,11 +95,14 @@ input[type=search],select,input[type=number]{border-radius:12px}
 <div class="grp"><h3>Themes <span class="seg"><button data-m="t" data-v="any" class="on">Match any</button><button data-m="t" data-v="all">Match all</button></span></h3><div class="chips" id="tc"></div></div>
 <div class="grp"><button class="btn" id="clr">Clear all filters</button></div>
 </div>
+<div class="panel" id="rq" hidden><h3 style="margin:0 0 4px;font-family:'Fraunces',Georgia,serif;font-size:1.15rem">Request a book</h3><p class="note" style="margin:0 0 10px">Can’t find a book you’d love to read? Tell us and the librarian will see your request.</p>
+<div class="cform"><input id="rt" maxlength="120" placeholder="Book title *" aria-label="Book title"><div id="rmatch" class="cmsg"></div><input id="ra" maxlength="80" placeholder="Author (if you know it)" aria-label="Author"><input id="rn" maxlength="30" placeholder="Your first name (optional)" aria-label="Your first name"><textarea id="rw" maxlength="300" rows="2" placeholder="Why would you like it? (optional)" aria-label="Why"></textarea><input class="hp" id="rh" tabindex="-1" autocomplete="off" aria-hidden="true"><button class="btn" id="rs">Send request</button><div class="cmsg" id="rm"></div></div></div>
 <div class="count"><span id="cnt"></span></div>
 <div class="books" id="list"></div>
 <p class="note" id="src"></p>
 </div>
 <script>
+var REQ={action:"https://docs.google.com/forms/d/e/1FAIpQLScNAa8EPWqWsbZATLc24h4DAzQ9W2a8biNcP4IMhlOBItKwIA/formResponse",title:"entry.1821441915",author:"entry.329326661",name:"entry.2008478374",why:"entry.94435295"};
 var FORM={action:"https://docs.google.com/forms/d/e/1FAIpQLSfY_5c2RDyeUtBgjyXaYwT538qO02EHpnXp8jVDSXdHwcwJjg/formResponse",title:"entry.261801718",name:"entry.102922873",comment:"entry.2088874236"};
 var COMMENTS_CSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vQMHFQvI6RzT2kcgenm2jabYYjWpZ5wv7qPEU781p8ZpSt1esmioCkWQauIesSXmqFl3vrRIzJJS-AS/pub?gid=1588631307&single=true&output=csv";
 var CSV_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vQMHFQvI6RzT2kcgenm2jabYYjWpZ5wv7qPEU781p8ZpSt1esmioCkWQauIesSXmqFl3vrRIzJJS-AS/pub?gid=0&single=true&output=csv";
@@ -182,8 +186,9 @@ function loadComments(){if(!COMMENTS_CSV)return;fetch(COMMENTS_CSV).then(functio
 function ix(k){for(var i=0;i<h.length;i++)if(h[i].indexOf(k)>-1)return i;return -1}
 var ib=ix("book"),inn=ix("name"),ic=ix("comment"),ia=ix("approv");if(ib<0||ic<0||ia<0)return;CM={};
 rows.slice(1).forEach(function(r){if(!/^(y|yes|x|true|ok|approved|1|✓|✔)/i.test((r[ia]||"").trim()))return;var k=(r[ib]||"").trim().toLowerCase(),txt=(r[ic]||"").trim();if(!k||!txt)return;(CM[k]=CM[k]||[]).unshift({name:inn>-1?(r[inn]||"").trim():"",text:txt})});later()}).catch(function(){})}
-document.addEventListener("click",function(e){var t=e.target;if(t.classList.contains("ctog")){OPEN[t.dataset.id]=!OPEN[t.dataset.id];render()}else if(t.classList.contains("csend"))sendComment(t);else if(t.id=="sur")surprise();else if(t.id=="bwfind"){var bb=botwPick();if(bb){S.q=bb.title;$("q").value=bb.title;render();$("list").scrollIntoView({behavior:"smooth"})}}else if(t.dataset.s){S.series=t.dataset.s;$("ser").value=t.dataset.s;$("panel").hidden=false;render()}});
+document.addEventListener("click",function(e){var t=e.target;if(t.classList.contains("ctog")){OPEN[t.dataset.id]=!OPEN[t.dataset.id];render()}else if(t.classList.contains("csend"))sendComment(t);else if(t.id=="sur")surprise();else if(t.id=="rqb"){$("rq").hidden=!$("rq").hidden}else if(t.id=="rs")sendReq();else if(t.id=="bwfind"){var bb=botwPick();if(bb){S.q=bb.title;$("q").value=bb.title;render();$("list").scrollIntoView({behavior:"smooth"})}}else if(t.dataset.s){S.series=t.dataset.s;$("ser").value=t.dataset.s;$("panel").hidden=false;render()}});
 $("ser").addEventListener("change",function(){S.series=this.value;render()});
+$("rt").addEventListener("input",showMatches);if(reqOn())$("rqb").style.display="";
 function weekNo(d){var t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())),day=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-day);var y0=new Date(Date.UTC(t.getUTCFullYear(),0,1));return {y:t.getUTCFullYear(),w:Math.ceil(((t-y0)/864e5+1)/7)}}
 function botwPick(){if(!B.length)return null;var f=B.filter(function(b){return b.feat});if(f.length)return f[0];var k=weekNo(new Date());return B[(k.y*53+k.w)%B.length]}
 function renderBotw(){var el=$("botw"),b=botwPick();if(!b){el.style.display="none";return}el.style.display="";el.style.setProperty("--bc",b.manual||b.ac||b.color);
@@ -192,6 +197,18 @@ function isNew(b){return B.length>3&&B.indexOf(b)>=B.length-3}
 var lastS="";function surprise(){var r=B.filter(match);if(!r.length){$("cnt").textContent="No books match your filters, so there’s nothing to surprise you with yet.";return}
 var av=r.filter(function(b){return b.avail}),pool=av.length?av:r;if(pool.length>1)pool=pool.filter(function(b){return b.id!==lastS});var b=pool[Math.floor(Math.random()*pool.length)];lastS=b.id;$("cnt").textContent="🎲 How about “"+b.title+"”?";
 var els=document.querySelectorAll("#list .book");for(var i=0;i<els.length;i++){if(els[i].dataset.bid===b.id){els[i].scrollIntoView({behavior:"smooth",block:"center"});els[i].classList.add("pop");(function(e){setTimeout(function(){e.classList.remove("pop")},2500)})(els[i]);break}}}
+function reqOn(){return !!(REQ.action&&REQ.title&&REQ.author&&REQ.name&&REQ.why)}
+function showMatches(){var v=$("rt").value.trim().toLowerCase(),m=$("rmatch");if(v.length<3){m.textContent="";return}
+var hits=B.filter(function(b){return b.title.toLowerCase().indexOf(v)>-1}).slice(0,3);
+m.textContent=hits.length?"We already have: "+hits.map(function(b){return"“"+b.title+"” ("+(b.avail?"available":"all copies out")+")"}).join(", ")+".":""}
+function sendReq(){var m=$("rm"),t=$("rt").value.trim();
+if($("rh").value){m.textContent="Thank you!";return}
+if(t.length<2){m.textContent="Please type the book’s title.";return}
+if(B.some(function(b){return b.title.trim().toLowerCase()===t.toLowerCase()})){m.textContent="We already have that one! Try searching for it above.";return}
+var last=0;try{last=+localStorage.getItem("lastr")||0}catch(e){}
+if(Date.now()-last<30000){m.textContent="Please wait a moment before sending another request.";return}
+var p=new URLSearchParams();p.append(REQ.title,t);p.append(REQ.author,$("ra").value.trim());p.append(REQ.name,$("rn").value.trim()||"Anonymous");p.append(REQ.why,$("rw").value.trim());$("rs").disabled=true;
+fetch(REQ.action,{method:"POST",mode:"no-cors",body:p}).then(function(){try{localStorage.setItem("lastr",""+Date.now())}catch(e){}["rt","ra","rn","rw"].forEach(function(i){$(i).value=""});$("rmatch").textContent="";m.textContent="Thank you! The librarian will see your request.";$("rs").disabled=false}).catch(function(){m.textContent="Sorry, that didn’t send. Please try again.";$("rs").disabled=false})}
 function match(b){if(S.wl&&W.indexOf(b.id)<0)return false;if(S.av&&!b.avail)return false;
 var q=S.q.toLowerCase();if(q&&(b.title+" "+b.authors.join(" ")).toLowerCase().indexOf(q)<0)return false;
 if(S.series&&b.series!==S.series)return false;if(S.lang&&b.langs.indexOf(S.lang)<0)return false;if(S.auth&&b.authors.indexOf(S.auth)<0)return false;if(S.type&&b.type!==S.type)return false;
